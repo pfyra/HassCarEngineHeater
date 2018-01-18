@@ -92,7 +92,7 @@ class Logger():
     self.bufferingSmtpHandler.dropAllMessages()
 
   def log2file(self, msg):
-    f = open(self.logfile, 'a')
+    f = open(self.logfile, 'a+')
     #self.formatter.format(msg)
     f.write(str(datetime.now()) + ": " + msg + '\n')
     f.close()
