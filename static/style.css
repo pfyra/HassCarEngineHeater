@@ -1,0 +1,31 @@
+/*
+.containing-element .ui-slider-switch { width: 9em }
+
+.switch-wrapper {
+  display: inline-block;
+  position: relative;
+  top: 3px;
+}*/
+
+table.topdotted{
+  border-width: 3px;
+  border-style: dotted dotted none dotted;
+}
+
+table.bottomdotted{
+  border-width: 3px;
+  border-style: none dotted dotted dotted;
+}
+
+table.fulldotted{
+  border-width: 3px;
+  border-style: dotted;
+}
+
+ul {
+  border-style: dotted;
+  border-width: 3px;
+}
+/*
+tr:nth-child(even){background-color: #f2f2f2;}
+*/

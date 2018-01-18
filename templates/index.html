@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Car departures</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="static/jquery.mobile-1.4.5/jquery.mobile-1.4.5.min.css" rel="stylesheet">
+<link href="static/jquery.mobile-1.4.5/jquery.mobile.theme-1.4.5.min.css" rel="stylesheet">
+<link rel="stylesheet" href="static/style.css">
+<script src="static/jquery-2.1.1.min.js"></script>
+<script src="static/jquery.mobile-1.4.5/jquery.mobile-1.4.5.min.js"></script>
+
+
+<script type=text/javascript>
+
+var pydata = {{ python_data|tojson }};
+var cars = pydata.cars
+var weekdays = pydata.weekdays 
+var hours = pydata.hours //["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"];
+var minutes = pydata.minutes // ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
+
+
+function loadDepartures(){
+  $("#departures tr").remove(); 
+  $.getJSON('/_get_departures', {})
+    .done(function(json) {
+      //console.log("json: " + json);
+      $.each( json, function( i, deptime ) {
+        //console.log(" deptime: " + i + "   " + deptime.when_str);
+
+        recuricon = "";
+        if (deptime.recurringId != "-1"){
+          recuricon = "&#8635;";
+        }
+
+        var d = new Date()
+        d.setMonth(deptime.month-1);
+        d.setDate(deptime.day_of_month-1);
+      
+        var element = '<tr data-depid="' + deptime.id + '" id="dep_tr_' + deptime.id + '">' + 
+                      '<td data-depid="' + deptime.id + '" id="dep_carname_' + deptime.id + '">' + deptime.carName + '</td>' + 
+                      '<td data-depid="' + deptime.id + '" id="dep_recuricon_' + deptime.id + '">' + recuricon + '</td>' +
+                      '<td>' +
+                      '<span data-depid="' + deptime.id + '" id="dep_weekday_' + deptime.id + '">' + weekdays[d.getDay()] + '</span>' +
+                      ' ' +
+                      '<span data-depid="' + deptime.id + '" id="dep_dom_' + deptime.id + '">' + deptime.day_of_month + '</span>' +
+                      '/' +
+                      '<span data-depid="' + deptime.id + '" id="dep_month_' + deptime.id + '">' + deptime.month + '</span>&nbsp;' +
+                      '<span data-depid="' + deptime.id + '" id="dep_hour_' + deptime.id + '">' + deptime.hour + '</span>' +
+                      ':' +
+                      '<span data-depid="' + deptime.id + '" id="dep_minute_' + deptime.id + '">' + deptime.minute+ '</span>' +
+                      '<td></td>' + 
+                      '</td></tr>';
+        $("#departures").prepend(element);
+        $("#dep_tr_" + deptime.id ).bind( "swipe", function ( event ){
+          if (confirm( pydata.lang_remove + " " + deptime.when_str + "?")){
+            $.getJSON('/_remove_departure', {
+              id: deptime.id
+            }).done(function(data){
+              $("#dep_tr_" + deptime.id).remove();
+            }).fail(function(data){
+              alert("removal failed!");
+            });
+          }
+          //$( event.target ).addClass( "swipe" );
+        });
+      });
+  });
+}
+
+function setupFormNewDepartures(){
+  var d = new Date();
+  // propose departure in ~1 hour
+  d.setHours(d.getHours() + 1);
+  d.setMinutes(Math.ceil(d.getMinutes()/15)*15)
+  timeNow = d.getFullYear() + '/' + (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + d.getMinutes();
+  $("#new_departure_datetime").datetimepicker({
+    step: 15,
+    value: timeNow,
+    minDate: 0});
+  $.datetimepicker.setLocale('se');
+
+  options = ""
+  $.each(cars, function(i, elem){
+    options += '<option value="' + elem + '">' + elem + '</option>';
+  });
+  
+  $('#new_departure_carname').html( '<select id="#new_departure_carname">' + options +'</select>');
+  $('#new_departure_carname').val(cars[0]).change();
+ 
+
+  $("#new_departure_form").submit(function(e){
+    $.getJSON('/_add_departure', {
+      when: $("#new_departure_datetime").val(),
+      carname: $("#new_departure_carname").val()
+      }).done(function(data){
+        loadDepartures();
+      }).fail(function(data){
+        alert("Add failed!");
+      });
+     
+    e.preventDefault();
+    e.returnValue = false;
+  });
+}
+
+
+function loadRecurringDepartures(){
+  $("#recurring-departures tr").remove(); 
+  $.getJSON('/_get_recurring_departures', {})
+    .done(function(json) {
+      //console.log("json: " + json);
+      $.each( json, function( i, recdeptime ) {
+        var row = '<tr id="recdep_tr_' + recdeptime.id + '">' + 
+                  '<td class="recdep-carname" data-recdepid="' + recdeptime.id + '">' + recdeptime.carName + "</td>" + 
+                  '<td>' + 
+                  '<span class="recdep-dayofweek" data-recdepid="' + recdeptime.id + '">' + weekdays[recdeptime.day_of_week] + "</span> " + 
+                  '<span class="recdep-hour" data-recdepid="' + recdeptime.id + '" align="right">' + recdeptime.hour + "</span>" +
+                  ':' +
+                  '<span class="recdep-minute" data-recdepid="' + recdeptime.id + '" halign="left">' + recdeptime.minute + "</span></td></tr>";
+        $("#recurring-departures").append(row);
+        $("#recdep_tr_" + recdeptime.id ).bind( "swipe", function ( event ){
+          if (confirm(pydata.lang_remove + " " + weekdays[recdeptime.day_of_week] + " " + recdeptime.hour + ":" + recdeptime.minute + " for " + recdeptime.carName + "?")){
+            $.getJSON('/_remove_recurring_departure', {
+              id: recdeptime.id
+            }).done(function(data){
+              $("#recdep_tr_" + recdeptime.id).remove();
+              loadDepartures(); /* reload to remove recurring departures from departure list */
+            }).fail(function(data){
+              alert("removal failed!");
+            });
+          }
+        });
+
+      });
+  });
+
+  /* Car */
+  $(".recdep").on( "dblclick", ".recdep-carname", function ( event ){
+    var recdepid = $(this).data("recdepid");
+    if ($(this).html().startsWith("<select")){
+      // select thingy is shown
+      $(this).html($("#select-car-" + recdepid).val());
+    }else{
+      // regular text is shown
+      var val = $(this).text();
+      var options = "";
+      $.each(cars, function(i, elem){
+        if (elem == val){
+          options += '<option value="' + elem + '" selected>' + elem + '</option>'
+        }else{
+          options += '<option value="' + elem + '">' + elem + '</option>'
+        }
+      });
+
+      $(this).html( '<select id="select-car-' + recdepid + '" data-id="' + recdepid + '" name="asdasd" class="asdasd">' + options +'</select>');
+
+      $("#select-car-" + recdepid).on('focusout', function() {
+        $.getJSON('/_update_recurring_departure', {
+          id: recdepid,
+          carname: $(this).val()
+        })
+        .done(function(json) { })
+        .fail(function(json) {
+          alert("failure");
+        })
+
+        $(this).replaceWith($(this).val());
+      });
+    }
+  });
+
+  /* Day of week */
+  $(".recdep").on( "dblclick", ".recdep-dayofweek", function ( event ){
+    var recdepid = $(this).data("recdepid");
+    if ($(this).html().startsWith("<select")){
+      // select thingy is shown
+      $(this).html($("#select-dow-" + recdepid).val());
+    }else{
+      // regular text is shown
+      var val = $(this).text();
+      var options = "";
+      $.each(weekdays, function(i, elem){
+        if (elem == val){
+          options += '<option value="' + elem + '" selected>' + elem + '</option>'
+        }else{
+          options += '<option value="' + elem + '">' + elem + '</option>'
+        }
+      });
+
+      $(this).html( '<select id="select-dow-' + recdepid + '" data-id="' + recdepid + '" name="asdasd" class="asdasd">' + options +'</select>');
+
+      $("#select-dow-" + recdepid).on('focusout', function() {
+        $.getJSON('/_update_recurring_departure', {
+          id: recdepid,
+          dayofweek: $(this).val()
+        })
+        .done(function(json) { })
+        .fail(function(json) {
+          alert("failure");
+        })
+
+        $(this).replaceWith($(this).val());
+      });
+    }
+  });
+
+  /* Hour */
+  $(".recdep").on( "dblclick", ".recdep-hour", function ( event ){
+    var recdepid = $(this).data("recdepid");
+    if ($(this).html().startsWith("<select")){
+      // select thingy is shown
+      $(this).html($("#select-hour-" + recdepid).val());
+    }else{
+      // regular text is shown
+      var val = $(this).text();
+      var options = "";
+      $.each(hours, function(i, elem){
+        if (elem == val){
+          options += '<option value="' + elem + '" selected>' + elem + '</option>'
+        }else{
+          options += '<option value="' + elem + '">' + elem + '</option>'
+        }
+      });
+
+      $(this).html( '<select id="select-hour-' + recdepid + '" data-id="' + recdepid + '" name="asdasd" class="asdasd">' + options +'</select>');
+
+      $("#select-hour-" + recdepid).on('focusout', function() {
+        $.getJSON('/_update_recurring_departure', {
+          id: recdepid,
+          hour: $(this).val()
+        })
+        .done(function(json) { })
+        .fail(function(json) {
+          alert("failure");
+        })
+
+        $(this).replaceWith($(this).val());
+      });
+    }
+  });
+
+  /* Minute */
+  $(".recdep").on( "dblclick", ".recdep-minute", function ( event ){
+    var recdepid = $(this).data("recdepid");
+    if ($(this).html().startsWith("<select")){
+      // select thingy is shown
+      $(this).html($("#select-minute-" + recdepid).val());
+    }else{
+      // regular text is shown
+      var val = $(this).text();
+      var options = "";
+      $.each(minutes, function(i, elem){
+        if (elem == val){
+          options += '<option value="' + elem + '" selected>' + elem + '</option>'
+        }else{
+          options += '<option value="' + elem + '">' + elem + '</option>'
+        }
+      });
+
+      $(this).html( '<select id="select-minute-' + recdepid + '" data-id="' + recdepid + '" name="asdasd" class="asdasd">' + options +'</select>');
+
+      $("#select-minute-" + recdepid).on('focusout', function() {
+        $.getJSON('/_update_recurring_departure', {
+          id: recdepid,
+          minute: $(this).val()
+        })
+        .done(function(json) { })
+        .fail(function(json) {
+          alert("failure");
+        })
+
+        $(this).replaceWith($(this).val());
+      });
+    }
+  });
+
+}
+
+function setupFormNewRecurringDeparture(){
+  var options = ""
+  $.each(weekdays, function(i, elem){
+      options += '<option value="' + i + '">' + elem + '</option>';
+  });
+  $('#new_recurring_departure_dow').html( '<select id="new_recurring_departure_dow" >' + options +'</select>');
+  $('#new_recurring_departure_dow').val(0).change();
+  
+  options = ""
+  $.each(hours, function(i, elem){
+    options += '<option value="' + elem + '">' + elem + '</option>';
+  });
+  $('#new_recurring_departure_hour').html( '<select id="new_recurring_departure_hour" >' + options +'</select>');
+  $('#new_recurring_departure_hour').val(hours[0]).change();
+
+  options = ""
+  $.each(minutes, function(i, elem){
+    options += '<option value="' + elem + '">' + elem + '</option>';
+  });
+  $('#new_recurring_departure_minute').html( '<select id="new_recurring_departure_minute" >' + options +'</select>');
+  $('#new_recurring_departure_minute').val(minutes[0]).change();
+
+  options = ""
+  $.each(cars, function(i, elem){
+    options += '<option value="' + elem + '">' + elem + '</option>';
+  });
+  
+  $('#new_recurring_departure_carname').html( '<select id="#new_recurring_departure_carname">' + options +'</select>');
+  $('#new_recurring_departure_carname').val(cars[0]).change();
+
+  $("#new_recurring_departure_form").submit(function(e){
+    $.getJSON('/_add_recurring_departure', {
+      dayofweek: $("#new_recurring_departure_dow").val(),
+      hour: $("#new_recurring_departure_hour").val(),
+      minute: $("#new_recurring_departure_minute").val(),
+      carname: $("#new_recurring_departure_carname").val()
+      }).done(function(data){
+        loadRecurringDepartures();
+      }).fail(function(data){
+        alert("Add failed!");
+      });
+     
+    e.preventDefault();
+    e.returnValue = false;
+  });
+}
+$(document).ready(function() {
+  loadDepartures();
+  setupFormNewDepartures();
+  loadRecurringDepartures();
+  setupFormNewRecurringDeparture();
+});
+
+</script>
+</head>
+<body>
+
+<h3>{{ lang_departures }} </h3>
+<table class="topdotted" id="departures" width="100%" border="0">
+</table>
+
+<form action="_add_departure" method="get" id="new_departure_form">
+<table class="bottomdotted" width="100%">
+<tr>
+<td>
+<select id="new_departure_carname">
+</select></td>
+<td></td>
+<td><input name="new_departure_datetime" id="new_departure_datetime" type="text" size="12"></td>
+<td><input type="submit" value="{{ lang_add }}"></td>
+</tr>
+</table>
+</form>
+
+
+<h3>{{ lang_recurring_departures }}</h3>
+
+<table id="recurring-departures" width="100%" class="recdep topdotted" border=0>
+</table>
+
+<form action="_add_recurring_departure" method="get" id="new_recurring_departure_form">
+<table class="bottomdotted" width="100%">
+<tr>
+<td>
+<select id="new_recurring_departure_carname">
+</select></td>
+<td></td>
+<td><select id="new_recurring_departure_dow"></td>
+<td><select id="new_recurring_departure_hour"></td>
+<td><select id="new_recurring_departure_minute"></td>
+<td><input type="submit" value="{{lang_add}}"></td>
+</tr>
+</table>
+</form>
+
+</body>
+<link rel="stylesheet" type="text/css" href="static/datetimepicker-master/jquery.datetimepicker.css" >
+<script src="static/datetimepicker-master/build/jquery.datetimepicker.full.min.js"></script>
+</html>
+
+

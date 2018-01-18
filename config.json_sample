@@ -1,0 +1,44 @@
+{
+  "_comment": "options for sending email when app crashes",
+  "mailHost": "localhost",
+  "mailFromAddr": "carengineheater@example.com",
+  "mailToAddr": "you@example.com",
+  "logfile": "/var/log/carenginetimer.log",
+  "loglevel_screen": 4,
+  "loglevel_file": 4,
+
+  "_comment": "temp2startheater is highest temperature when heater will be switched on, in celsius",
+  "temp2startheater": 10.0,
+
+  "_comment": "How many minutes should the heater run, e.g. 5 minutes for every degree (C) below <temp2startheater>",
+  "minutes_per_degree": "5",
+
+  "_comment": "How long (in minutes) should the heater be allowed to run, independent of temperature",
+  "max_heat_time": 90,
+
+  "_comment": "Name of outdoor temperature sensor",
+  "outdoor_temp_sensor_name": "sensor.yr_temperature",
+
+  "cars": [
+    {
+      "name": "Porsche",
+      "switch": "switch.home_assistant_switch_name"
+    },
+    {
+      "name": "Koeningsegg",
+      "switch": "switch.home_assistant_switch_name"
+    }],
+  "homeassistant_host": "127.0.0.1",
+  "homeassistant_password": "your_http_password_for_homeassistant",
+
+  "_comment": "you may remove hours, but you cannot change e,g, 13 to 1pm",
+  "hours": ["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"],
+  "minutes": ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"]
+
+  "_comment": "Options for localization etc",
+  "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],  
+  "lang_departures": "Departures",
+  "lang_recurring_departures": "Recurring Departures",
+  "lang_remove": "Remove",
+  "lang_add": "Add"
+}
