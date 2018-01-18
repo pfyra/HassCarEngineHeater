@@ -1,5 +1,5 @@
 # HassCarEngineHeater
-A very simple web UI for starting electrical car engine heater for oneshot and weekly recurring car departures for the [Home assistant](www.home-assistant.io) home automation application.
+A very simple web UI for starting electrical car engine heater for oneshot and weekly recurring car departures for the [Home assistant](https://www.home-assistant.io) home automation application.
 
 
 # Installation
