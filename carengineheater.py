@@ -145,8 +145,8 @@ class CheckCarEngineHeaterJob(Job):
 
 
         temp = get_current_temperature()
-        diff = config['temp2startheater'] - temp
-        minutes2heat = diff* config['minutes_per_degree']  # 5 minutes per degree lower than 10C
+        diff = float(config['temp2startheater']) - temp
+        minutes2heat = diff * float(config['minutes_per_degree'])  # 5 minutes per degree lower than 10C
         if minutes2heat > config['max_heat_time']:
             # Cap at 90 minutes
             minutes2heat = config['max_heat_time']

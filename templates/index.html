@@ -14,21 +14,17 @@
 <script type=text/javascript>
 
 var pydata = {{ python_data|tojson }};
-var cars = pydata.cars
-var weekdays = pydata.weekdays 
-var hours = pydata.hours //["00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23"];
-var minutes = pydata.minutes // ["00", "05", "10", "15", "20", "25", "30", "35", "40", "45", "50", "55"];
-
+var cars = pydata.cars;
+var weekdays = pydata.weekdays;
+var hours = pydata.hours;
+var minutes = pydata.minutes;
 
 function loadDepartures(){
   $("#departures tr").remove(); 
   $.getJSON('/_get_departures', {})
     .done(function(json) {
-      //console.log("json: " + json);
       $.each( json, function( i, deptime ) {
-        //console.log(" deptime: " + i + "   " + deptime.when_str);
-
-        recuricon = "";
+        var recuricon = "";
         if (deptime.recurringId != "-1"){
           recuricon = "&#8635;";
         }
@@ -62,7 +58,6 @@ function loadDepartures(){
               alert("removal failed!");
             });
           }
-          //$( event.target ).addClass( "swipe" );
         });
       });
   });
@@ -328,6 +323,12 @@ $(document).ready(function() {
   setupFormNewDepartures();
   loadRecurringDepartures();
   setupFormNewRecurringDeparture();
+
+  $(window).focus(function(e) {
+    /* we got focus, lets reload everything */
+    loadDepartures();
+    loadRecurringDepartures();
+  });
 });
 
 </script>
