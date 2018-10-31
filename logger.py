@@ -92,9 +92,13 @@ class Logger():
     self.bufferingSmtpHandler.dropAllMessages()
 
   def log2file(self, msg):
-    f = open(self.logfile, 'a+')
-    #self.formatter.format(msg)
-    f.write(str(datetime.now()) + ": " + msg + '\n')
-    f.close()
+    try:
+        with open(self.logfile, 'a+') as f:
+            f.write(str(datetime.now()) + ": " + msg + '\n')
+    except Exception as e:
+        # I get stupid errors about log file not found when a+ should create it.
+        pass
+
+
 
 log = Logger()

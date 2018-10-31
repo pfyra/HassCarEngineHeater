@@ -18,7 +18,6 @@ var cars = pydata.cars;
 var weekdays = pydata.weekdays;
 var hours = pydata.hours;
 var minutes = pydata.minutes;
-
 function loadDepartures(){
   $("#departures tr").remove(); 
   $.getJSON('/_get_departures', {})
@@ -28,16 +27,13 @@ function loadDepartures(){
         if (deptime.recurringId != "-1"){
           recuricon = "&#8635;";
         }
-
-        var d = new Date()
-        d.setMonth(deptime.month-1);
-        d.setDate(deptime.day_of_month-1);
-      
+  
+        var d = new Date(deptime.year, deptime.month-1, deptime.day_of_month);  // deptime.month: 1-12, Date: 0-11
         var element = '<tr data-depid="' + deptime.id + '" id="dep_tr_' + deptime.id + '">' + 
                       '<td data-depid="' + deptime.id + '" id="dep_carname_' + deptime.id + '">' + deptime.carName + '</td>' + 
                       '<td data-depid="' + deptime.id + '" id="dep_recuricon_' + deptime.id + '">' + recuricon + '</td>' +
                       '<td>' +
-                      '<span data-depid="' + deptime.id + '" id="dep_weekday_' + deptime.id + '">' + weekdays[d.getDay()] + '</span>' +
+                      '<span data-depid="' + deptime.id + '" id="dep_weekday_' + deptime.id + '">' + weekdays[d.getDay()-1] + '</span>' +
                       ' ' +
                       '<span data-depid="' + deptime.id + '" id="dep_dom_' + deptime.id + '">' + deptime.day_of_month + '</span>' +
                       '/' +
@@ -63,7 +59,7 @@ function loadDepartures(){
   });
 }
 
-function setupFormNewDepartures(){
+function setProposedDepartureTime(){
   var d = new Date();
   // propose departure in ~1 hour
   d.setHours(d.getHours() + 1);
@@ -74,6 +70,9 @@ function setupFormNewDepartures(){
     value: timeNow,
     minDate: 0});
   $.datetimepicker.setLocale('se');
+}
+
+function setupFormNewDepartures(){
 
   options = ""
   $.each(cars, function(i, elem){
@@ -323,15 +322,20 @@ $(document).ready(function() {
   setupFormNewDepartures();
   loadRecurringDepartures();
   setupFormNewRecurringDeparture();
+  setProposedDepartureTime();
 
-  $(window).focus(function(e) {
-    /* we got focus, lets reload everything */
-    loadDepartures();
-    loadRecurringDepartures();
-  });
+  setTimeout(() =>
+    $(window).focus(function(e) {
+      /* we got focus, lets reload everything */
+      setProposedDepartureTime();
+      loadDepartures();
+      loadRecurringDepartures();
+    }), 1000);
 });
 
 </script>
+<link rel="stylesheet" type="text/css" href="static/datetimepicker-master/jquery.datetimepicker.css" >
+<script src="static/datetimepicker-master/build/jquery.datetimepicker.full.min.js"></script>
 </head>
 <body>
 
@@ -365,17 +369,15 @@ $(document).ready(function() {
 <select id="new_recurring_departure_carname">
 </select></td>
 <td></td>
-<td><select id="new_recurring_departure_dow"></td>
-<td><select id="new_recurring_departure_hour"></td>
-<td><select id="new_recurring_departure_minute"></td>
+<td><select id="new_recurring_departure_dow"></select></td>
+<td><select id="new_recurring_departure_hour"></select></td>
+<td><select id="new_recurring_departure_minute"></select></td>
 <td><input type="submit" value="{{lang_add}}"></td>
 </tr>
 </table>
 </form>
 
 </body>
-<link rel="stylesheet" type="text/css" href="static/datetimepicker-master/jquery.datetimepicker.css" >
-<script src="static/datetimepicker-master/build/jquery.datetimepicker.full.min.js"></script>
 </html>
 
 

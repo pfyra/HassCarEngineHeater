@@ -605,6 +605,7 @@ def create_app():
                     deptimes += [copy.deepcopy(departureTime)]
         for deptime in deptimes:
             deptime.when_str = deptime.when.strftime("%a %d/%m %H:%M")
+            deptime.year = deptime.when.strftime("%Y")
             deptime.month = deptime.when.strftime("%m")
             deptime.day_of_month = deptime.when.strftime("%d")
             deptime.hour = deptime.when.strftime("%H")
@@ -838,6 +839,7 @@ def loadDepartureTimesFromFile(filename):
 
 
 def loadRecurringDeparturesFromFile(filename):
+    global recurringDepartureTimes
     try:
         with open(filename, "r") as f:
             data = f.read()
