@@ -549,9 +549,9 @@ def removeDepartureTimesForRecurringDepartureTime(recdep):
 # dataLock must be held by caller!
 def removeDepartureTime(deptime):
     global departureTimes
-    (checkcarengineheaterjob_found, activationjob_found, _) = removeJobsForDepartureTime(deptime)
-    if not checkcarengineheaterjob_found and activationjob_found:
-        # Heater has been activated! Turn it off immediately
+    (checkcarengineheaterjob_found, activationjob_found, deactivationjob_found) = removeJobsForDepartureTime(deptime)
+    if deactivationjob_found and not activationjob_found:
+        # Heater has been activated for this departure! Turn it off immediately
         turn_off_heater(deptime.carName)
     if deptime.recurringId == -1:
         # single shot departure -> remove it
