@@ -15,7 +15,7 @@ import sys
 import random
 import signal
 from logger import log, loglevel
-import homeassistant.remote as remote
+#import homeassistant.remote as remote
 from homeassistant.const import STATE_ON, STATE_OFF
 import jsonpickle
 import copy
@@ -24,6 +24,7 @@ import json
 #internal
 import termcolor2 as color
 from job import Job
+from hassapi import HassAPI
 
 
 
@@ -75,6 +76,7 @@ class Car(object):
     def __init__(self, name, entity_id):
         self.name = name
         self.entity_id = entity_id  # in home assistant
+        self.state = False    # True = on, False = off
 
 
 def getSwitchByCarName(carName):
@@ -191,7 +193,7 @@ class ActivateCarEngineHeaterJob(Job):
         self.departureId = departureId
 
     def execute(self):
-        print ("Starting heater for " + self.carName + " NOW")
+        print ("Starting heater for " + self.carName + " NOW (departure " + str(self.departureId) + ")")
         switch = getSwitchByCarName(self.carName)
         switch.on()
 
@@ -215,7 +217,7 @@ class DeactivateCarEngineHeaterJob(Job):
         self.departureId = departureId
 
     def execute(self):
-        print ("Departure for " + self.carName + " NOW")
+        print ("Departure for " + self.carName + " NOW (departure " + str(self.departureId) + ")")
         #log.info(color.turquoise("Running") + " DisarmCarEngineJob for car: " + self.carName)
         switch = getSwitchByCarName(self.carName)
         switch.off()
@@ -392,15 +394,9 @@ class Switch(object):
         self.state = state
         domain = 'switch'
         if state == STATE_ON:
-            return remote.call_service(hassapi,
-                                       domain,
-                                       'turn_on',
-                                       {'entity_id': '{}'.format(self.entity_id)})
+            assert hassapi.turn_on(self.entity_id)
         elif state == STATE_OFF:
-            return remote.call_service(hassapi,
-                                       domain,
-                                       'turn_off',
-                                       {'entity_id': '{}'.format(self.entity_id)})
+            assert hassapi.turn_off(self.entity_id)
         else:
             assert False
 
@@ -418,20 +414,21 @@ class HomeAssistantSyncJob(Job):
         global switches
         with dataLock:
             switches = []
-            entities = remote.get_states(hassapi)
+            entities = hassapi.get_states()
             for entity in entities:
-                if entity.entity_id.startswith('switch'):
-                    data = remote.get_state(hassapi, entity.entity_id)
+                if entity['entity_id'].startswith('switch'):
+                    #data = remote.get_state(hassapi, entity.entity_id)
+                    state = entity['state']
                     try:
-                        friendly_name = data.attributes['friendly_name']
+                        friendly_name = entity['attributes']['friendly_name']
                     except:
                         friendly_name = "-"
                     switches += [Switch(friendly_name,
-                                        entity.entity_id,
-                                        data.state)]
+                                        entity['entity_id'],
+                                        entity['state'])]
                     log.debug("Added H-A switch: " + friendly_name + \
-                              ", " + entity.entity_id + \
-                              ", " + data.state)
+                              ", " + entity['entity_id'] + \
+                              ", " + state)
 
             # do a config check:
             for car in cars:
@@ -442,6 +439,31 @@ class HomeAssistantSyncJob(Job):
 
     def reschedule(self):
         return datetime.datetime.today() + datetime.timedelta(hours=3)
+
+class HomeAssistantStateSyncJob(Job):
+
+    """
+    Retrieves state for car switches from home assistant
+    """
+
+    def __init__(self, execTime):
+      super(HomeAssistantStateSyncJob, self).__init__(execTime)
+
+    def execute(self):
+        entities = hassapi.get_states()
+
+        for car in cars:
+            if getSwitchForCar(car) is None:
+                log.fatal("Switch for car " + car.name + " not found!")
+            else:
+                #log.debug("Switch for car " + car.name + " found!")
+                for entity in entities:
+                    if car.entity_id == entity['entity_id']:
+                        car.state = entity['state']
+
+    def reschedule(self):
+        return datetime.datetime.today() + datetime.timedelta(minutes=1)
+
 
 
 class InfoJob(Job):
@@ -518,11 +540,11 @@ def turn_on_heater(carName):
 
 
 def get_current_temperature():
-    entities = remote.get_states(hassapi)
+    entities = hassapi.get_states()
     for entity in entities:
-        if entity.entity_id == config["outdoor_temp_sensor_name"]:
-            data = remote.get_state(hassapi, entity.entity_id)
-            return float(data.state)
+        if entity['entity_id'] == config["outdoor_temp_sensor_name"]:
+            #data = remote.get_state(hassapi, entity.entity_id)
+            return float(entity['attributes']['temperature'])
     assert False, "Outdoor temp sensor not found. Check your config!"
 
 
@@ -768,6 +790,13 @@ def create_app():
         return string
 
 
+    @app.route('/_get_cars')
+    def get_cars():
+        global dataLock
+        with dataLock:
+            return jsonpickle.encode(cars)
+
+
     #
     # HTML stuffs
     #
@@ -792,7 +821,8 @@ def create_app():
                                python_data=data,
                                lang_add=config['lang_add'],
                                lang_departures=config['lang_departures'],
-                               lang_recurring_departures=config['lang_recurring_departures'])
+                               lang_recurring_departures=config['lang_recurring_departures'],
+                               lang_cars=config['lang_cars'])
 
     @app.route('/static/<path:path>')
     def send_static(path):
@@ -876,7 +906,7 @@ def main():
               True)
 
     log.info("Starting up")
-    hassapi = remote.API(config['homeassistant_host'], config['homeassistant_password'])
+    hassapi = HassAPI(token=config['homeassistant_token'])
     for car in config['cars']:
         cars.append(Car(car['name'], car['switch']))
 
@@ -893,6 +923,7 @@ def main():
     jobscheduler.addJob(UpdateJobsJob(datetime.datetime.today()))
     jobscheduler.addJob(InfoJob(datetime.datetime.today() + datetime.timedelta(seconds=30)))
     jobscheduler.addJob(HomeAssistantSyncJob(datetime.datetime.today()))
+    jobscheduler.addJob(HomeAssistantStateSyncJob(datetime.datetime.today() + datetime.timedelta(seconds=5)))
 
     signal.signal(signal.SIGINT, signal_handler)
     app = create_app()

@@ -59,6 +59,27 @@ function loadDepartures(){
   });
 }
 
+function loadStates(){
+  $("#car-list tr").remove(); 
+  $.getJSON('/_get_cars', {})
+    .done(function(json) {
+      $.each( json, function( i, car ) {
+        state = "? (" + car.state + ")";
+        if (car.state == 'on'){
+          state = "<img src='static/simple-cartoon-flame-png-transparent.png'>";
+        } else if (car.state == 'off' ){
+          state = "<img src='static/Snow_flake_icon.png'>";
+        }
+        var element = '<tr>' + 
+                      '<td>' + car.name + '</td>' + 
+                      '<td>' + state + '</td>' + 
+                      '</tr>';
+        $("#car-list").prepend(element);
+      });
+  });
+}
+
+
 function setProposedDepartureTime(){
   var d = new Date();
   // propose departure in ~1 hour
@@ -323,6 +344,8 @@ $(document).ready(function() {
   loadRecurringDepartures();
   setupFormNewRecurringDeparture();
   setProposedDepartureTime();
+  loadStates();
+  setInterval(loadStates, 60000);
 
   setTimeout(() =>
     $(window).focus(function(e) {
@@ -330,6 +353,7 @@ $(document).ready(function() {
       setProposedDepartureTime();
       loadDepartures();
       loadRecurringDepartures();
+      loadStates();
     }), 1000);
 });
 
@@ -376,6 +400,13 @@ $(document).ready(function() {
 </tr>
 </table>
 </form>
+
+<h3>{{ lang_cars }}</h3>
+
+<table id="car-list" width="100%" class="topdotted bottomdotted" border=0>
+</table>
+
+
 
 </body>
 </html>
