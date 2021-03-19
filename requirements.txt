@@ -7,7 +7,7 @@ click==6.7
 Flask==1.0
 homeassistant==0.56.2
 itsdangerous==0.24
-Jinja2==2.9.6
+Jinja2==2.11.3
 jsonify==0.5
 jsonpickle==0.9.5
 MarkupSafe==1.0
